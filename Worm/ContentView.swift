@@ -76,19 +76,21 @@ struct SizeGetter: View {
 class WormData: ObservableObject {
     
     // worm constants
-    let radius: CGFloat = 15.0         // segment radius
-    let segmentNumber = 40             // number of segments
-    let stepLength: CGFloat = 10       // maximum offset for each coordinate
-    let minStepsBeforeTurn: Int = 5    // min number of steps before turn
-    let maxStepsBeforeTurn: Int = 20   // max number of steps before turn
-    let pace: TimeInterval = 0.07      // move every 'pace' seconds
+    let radius: CGFloat = 15.0                 // segment radius
+    let segmentNumber = 40                     // number of segments
+    private let minStepsBeforeTurn: Int = 3    // min number of steps before turn
+    private let maxStepsBeforeTurn: Int = 5    // max number of steps before turn
+    private let pace: TimeInterval = 0.07      // move every 'pace' seconds
+    private let maxYaw: Int = 90               // макс. угол рыскания при повороте (0...180)
+    private let maxStepLength: CGFloat = 10    // maximum step length
     
     // worm parameters
     @Published var positions: [CGPoint] = []
     var colors: [Color] = []
-    var stepsLeft = 0
-    var xOffset: CGFloat = 0
-    var yOffset: CGFloat = 0
+    private var stepsLeft = 0
+    private var azimuth: Int = 315     // текущее значение азимута в градусах
+    private var xOffset: CGFloat = 0
+    private var yOffset: CGFloat = 0
     
     // to generate recurring events
     private var cancellable: Cancellable?
@@ -114,7 +116,7 @@ class WormData: ObservableObject {
     init() {
         let colorValue = 1.0 / Double(segmentNumber)
         for i in 0..<segmentNumber {
-            let coordinate = radius - stepLength * CGFloat(i)
+            let coordinate = radius - maxStepLength * CGFloat(i)
             positions.append(CGPoint(x: coordinate, y: coordinate))
             colors.append(Color.init(red: Double(i) * colorValue,
                                      green: Double(i) * colorValue,
@@ -143,8 +145,8 @@ class WormData: ObservableObject {
             // move to screen center ASAP
             let xCenter = fieldSize.width / 2
             let yCenter = fieldSize.height / 2
-            xOffset = signum(a: xCenter, b: positions[0].x) * stepLength
-            yOffset = signum(a: yCenter, b: positions[0].y) * stepLength
+            xOffset = signum(a: xCenter, b: positions[0].x) * maxStepLength
+            yOffset = signum(a: yCenter, b: positions[0].y) * maxStepLength
             
             let newX = positions[0].x + xOffset
             let newY = positions[0].y + yOffset
@@ -153,35 +155,63 @@ class WormData: ObservableObject {
             return
         }
         
+        // if leg is over - generate new leg parameters
         if stepsLeft == 0 {
             stepsLeft = Int.random(in: minStepsBeforeTurn...maxStepsBeforeTurn)
-            xOffset = CGFloat.random(in: -stepLength...stepLength)
-            yOffset = CGFloat.random(in: -stepLength...stepLength)
+            (xOffset, yOffset) = newOffsets()
         }
         stepsLeft -= 1
         
         var newX = positions[0].x + xOffset
         var newY = positions[0].y + yOffset
         
+        // if the new position is out of visible area
         if newX < minX || newX > maxX {
             newX = newX - 2 * xOffset
-            xOffset = -xOffset
+            flipForX()
         }
         if newY < minY || newY > maxY {
             newY = newY - 2 * yOffset
-            yOffset = -yOffset
+            flipForY()
         }
         
         positions.remove(at: segmentNumber - 1)
         positions.insert(CGPoint(x: newX, y: newY), at: 0)
     }
     
+    // calculate new xOffset and yOffset based on random(yaw and stepLenth)
+    private func newOffsets() -> (CGFloat, CGFloat) {
+        azimuth = azimuth + Int.random(in: -maxYaw...maxYaw)
+        // для дебага приведу azimuth к диапазону 0...359
+        azimuth = azimuth % 360  // если больше 360
+        azimuth = azimuth < 0 ? 360 + azimuth : azimuth // если меньше 0
+        let azimuthRadian = CGFloat(Double(azimuth) * .pi / 180.0)
+
+        let xOffset = maxStepLength * cos(azimuthRadian)
+        let yOffset = maxStepLength * sin(azimuthRadian)
+        return (xOffset, yOffset)
+    }
+    
+    // when worm crosses x border - flip x direction
+    private func flipForX() {
+        xOffset = -xOffset
+        azimuth = (azimuth <= 180 ? 180 : 540) - azimuth
+    }
+    
+    // when worm crosses y border - flip y direction
+    private func flipForY() {
+        yOffset = -yOffset
+        azimuth = 360 - azimuth
+    }
+    
+    // checks if 'point' is inside visible area
     private func insideField(point: CGPoint) -> Bool {
         if point.x < minX || point.x > maxX { return false }
         if point.y < minY || point.y > maxY { return false }
         return true
     }
     
+    // signum function for CGFloat
     private func signum(a: CGFloat, b: CGFloat) -> CGFloat {
         if a > b { return CGFloat(1) }
         if a < b { return CGFloat(-1) }
