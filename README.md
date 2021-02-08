@@ -1,6 +1,3 @@
-# Worm
-В учебных целях.
+# Worm (SwiftUI)
+Application for educational purposes as a past of the "Programmerare iPhone och Android" course
 
-Задачи:
-1) Очевидно, код необходимо улучшать
-2) Можно/нужно/правильно ли объединить все структуры и класс червяка в один класс?
