@@ -1,4 +1,11 @@
 # Worm (SwiftUI)
 Application for educational purposes as a past of the "Programmerare iPhone och Android" course.
 
-Goal: to learn GeometryReader, shapes and some animation withour SpriteKit.
+Goals:
+* to learn how to use GeometryReader to get screen dimensions
+* to learn how to use GeometryReader to process screen rotation
+* to learn shapes and some animation withour SpriteKit.
+
+**Animated preview:**
+
+<img src="worm.gif" alt="worm"/>
