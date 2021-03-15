@@ -1,5 +1,5 @@
 # Worm (SwiftUI)
-Application for educational purposes as a past of the "Programmerare iPhone och Android" course.
+Application for educational purposes as a part of the "Programmerare iPhone och Android" course.
 
 Goals:
 * to learn how to use GeometryReader to get screen dimensions
